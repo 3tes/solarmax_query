@@ -1,5 +1,5 @@
-# SolarMax-Query-Libary
-A python libary for quering SolarMax inverters
+# SolarMax-Query-Library
+A python library for quering SolarMax inverters
 
 This was create with the help of: https://github.com/bwurst/python-solarmax
 
