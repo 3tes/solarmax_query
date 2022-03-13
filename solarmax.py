@@ -84,8 +84,34 @@ class SolarMax():
         
         # parse data
         return self.parseData(data)
-    
-    def ACOutput(self) -> float:
+
+    def getUnit(self, funktion: object) -> str:
+        units = {
+            self.acOutput: "W",
+            self.operatingHours: "h",
+            self.dateYear: "a",
+            self.dateMonth: "m",
+            self.dateDay: "d",
+            self.energyYear: "kWh",
+            self.energyMonth: "kWh",
+            self.energyDay: "kWh",
+            self.energyTotal: "kWh",
+            self.installedCapacity: "W",
+            self.mainsCycleDuration: "μs",
+            self.networkAddress: "",
+            self.relativeOutput: "%",
+            self.softwareVersion: "",
+            self.voltageDC: "V",
+            self.voltagePhaseOne: "V",
+            self.currentDC: "A",
+            self.temperaturePowerUnitOne: "°C",
+            self.model: "",
+            self.timeMinutes: "min",
+            self.timeHours: "h",
+        }
+        return units[funktion]
+
+    def acOutput(self) -> float:
         data = self.query("PAC")
         return round(data * 0.5, 1)
     
