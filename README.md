@@ -7,7 +7,7 @@ You can read about the exact specifications of the protocol in the pdf in the do
 
 ## Installation
 ```python
-pip install solarmax_query
+pip install solarmax-query
 ```
 
 ## Usage
