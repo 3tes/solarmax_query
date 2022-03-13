@@ -1,4 +1,4 @@
-import socket, subprocess, os
+import socket, subprocess, os, time
 
 class SolarMax():
     def __init__(self, host: str, port: int, inverterIndex: int) -> None:
@@ -19,7 +19,12 @@ class SolarMax():
             out = subprocess.Popen(["ping", "-c", "1", self.host], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out.wait()
         return out.returncode == 0
-        
+
+    def reconnect(self) -> None:
+        self.__del__()
+        while(not self.pingInverter()):
+            time.sleep(60)
+        self.connect()
 
     def connect(self) -> None:
         if not self.pingInverter():
@@ -92,21 +97,13 @@ class SolarMax():
             while len(data) < 1:
                 data = self.socket.recv(255).decode()
         except:
-            self.socket.close()
-            self.connect()
-
-            # send query
-            self.socket.sendall(queryString.encode())
-            #recive query
-            data = ""
-            while len(data) < 1:
-                data = self.socket.recv(255).decode()
+            return None
         
         # check crc
         inCrc = data[-5:-1]
         checkCrc = self.checksum(data[1:-5])
         if inCrc != checkCrc:
-            raise Exception("CRC check failed")
+            return None
         
         # parse data
         return self.parseData(data)
@@ -144,7 +141,9 @@ class SolarMax():
             20030: 'SolarMax 4200S',
             20040: 'SolarMax 6000S',
         }
-        return inverter_types[self.type()]
+        data = self.type()
+        if data == None: return None
+        return inverter_types[data]
 
     def status(self) -> str:
         status_codes = {
@@ -158,7 +157,9 @@ class SolarMax():
             20007: 'Temperaturbegrenzung',
             20008: 'Netzbetrieb',
         }
-        return status_codes[self.query("SYS")]
+        data = self.query("SYS")
+        if data == None: return None
+        return status_codes[data]
     
     def alarmCode(self) -> str:
         alarm_codes = {
@@ -181,10 +182,13 @@ class SolarMax():
             32768: 'Alarm 16',
             65536: 'Alarm 17',
         }
-        return alarm_codes[self.query("SAL")]
+        data = self.query("SAL")
+        if data == None: return None
+        return alarm_codes[data]
 
     def acOutput(self) -> float:
         data = self.query("PAC")
+        if data == None: return None
         return round(data * 0.5, 1)
     
     def operatingHours(self) -> int:
@@ -206,13 +210,17 @@ class SolarMax():
         return self.query("KMT")
     
     def energyDay(self) -> float:
-        return round(self.query("KDY") * 0.1, 1)
+        data = self.query("KDY")
+        if data == None: return None
+        return round(data * 0.1, 1)
     
     def energyTotal(self) -> int:
         return self.query("KT0")
     
     def installedCapacity(self) -> float:
-        return round(self.query("PIN") * 0.5, 1)
+        data = self.query("PIN")
+        if data == None: return None
+        return round(data * 0.5, 1)
     
     def mainsCycleDuration(self) -> int:
         return self.query("TNP")
@@ -227,16 +235,24 @@ class SolarMax():
         return self.query("SWV")
     
     def voltageDC(self) -> float:
-        return round(self.query("UDC") * 0.1, 1)
+        data = self.query("UDC")
+        if data == None: return None
+        return round(data * 0.1, 1)
     
     def voltagePhaseOne(self) -> float:
-        return round(self.query("UL1") * 0.1, 1)
+        data = self.query("UL1")
+        if data == None: return None
+        return round(data * 0.1, 1)
     
     def currentDC(self) -> float:
-        return round(self.query("IDC") * 0.01, 2)
+        data = self.query("IDC")
+        if data == None: return None
+        return round(data * 0.01, 2)
     
     def currentPhaseOne(self) -> float:
-        return round(self.query("IL1") * 0.01, 2)
+        data = self.query("IL1")
+        if data == None: return None
+        return round(data * 0.01, 2)
     
     def temperaturePowerUnitOne(self) -> int:
         return self.query("TKK")
