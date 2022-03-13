@@ -1,0 +1,1 @@
+from .solarmax import SolarMax
