@@ -64,6 +64,8 @@ class SolarMax():
         if ndata == "":
             return None
         ndata = ndata.split("=")[1]
+        if "," in ndata:
+            ndata = ndata.split(",")[0]
         return int(ndata, 16)
 
     def query(self, code: str) -> int:
@@ -110,6 +112,52 @@ class SolarMax():
             self.timeHours: "h",
         }
         return units[funktion]
+
+    def model(self) -> str:
+        inverter_types = {
+            20010: { 'desc': 'SolarMax 2000S', 'max': 2000, },
+            20020: { 'desc': 'SolarMax 3000S', 'max': 3000, },
+            20030: { 'desc': 'SolarMax 4200S', 'max': 4200, },
+            20040: { 'desc': 'SolarMax 6000S', 'max': 6000, },
+        }
+        return inverter_types[self.type()]['desc']
+
+    def status(self) -> str:
+        status_codes = {
+            20000: 'Keine Kommunikation',
+            20001: 'In Betrieb',
+            20002: 'Zu wenig Einstrahlung',
+            20003: 'Anfahren',
+            20004: 'Betrieb auf MPP',
+            20005: 'Ventilator läuft',
+            20006: 'Betrieb auf Maximalleistung',
+            20007: 'Temperaturbegrenzung',
+            20008: 'Netzbetrieb',
+        }
+        return status_codes[self.query("SYS")]
+    
+    def alarmCode(self) -> str:
+        alarm_codes = {
+            0: 'kein Fehler',
+            1: 'Externer Fehler 1',
+            2: 'Isolationsfehler DC-Seite',
+            4: 'Fehlerstrom Erde zu Groß',
+            8: 'Sicherungsbruch Mittelpunkterde',
+            16: 'Externer Alarm 2',
+            32: 'Langzeit-Temperaturbegrenzung',
+            64: 'Fehler AC-Einspeisung',
+            128: 'Externer Alarm 4',
+            256: 'Ventilator defekt',
+            512: 'Sicherungsbruch',
+            1024: 'Ausfall Temperatursensor',
+            2048: 'Alarm 12',
+            4096: 'Alarm 13',
+            8192: 'Alarm 14',
+            16384: 'Alarm 15',
+            32768: 'Alarm 16',
+            65536: 'Alarm 17',
+        }
+        return alarm_codes[self.query("SAL")]
 
     def acOutput(self) -> float:
         data = self.query("PAC")
@@ -169,7 +217,7 @@ class SolarMax():
     def temperaturePowerUnitOne(self) -> int:
         return self.query("TKK")
     
-    def model(self) -> int:
+    def type(self) -> int:
         return self.query("TYP")
     
     def timeMinutes(self) -> int:
