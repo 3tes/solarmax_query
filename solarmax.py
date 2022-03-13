@@ -1,22 +1,35 @@
-import socket
+import socket, subprocess, os
 
 class SolarMax():
     def __init__(self, host: str, port: int, inverterIndex: int) -> None:
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #type: socket.socket
         self.index = inverterIndex
-        self.connect(host, port)
+        self.host = host
+        self.port = port
+        self.connect()
     
     def __del__(self) -> None:
         if self.socket is not None:
             self.socket.close()
-    
-    def connect(self, host:str , port: int) -> None:
+
+    def pingInverter(self) -> bool:
+        if os.name == "nt":
+            out = subprocess.Popen(["ping", "-n", "1", self.host], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        else:
+            out = subprocess.Popen(["ping", "-c", "1", self.host], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        out.wait()
+        return out.returncode == 0
+        
+
+    def connect(self) -> None:
+        if not self.pingInverter():
+            raise Exception("Inverter not reachable")
         try:
-            self.socket.connect((host, port))
+            self.socket.connect((self.host, self.port))
         except:
             self.socket.close()
             self.socket = None
-            raise Exception("Could not connect to host: {}".format(host))
+            raise Exception(f"Could not connect to host: {self.host}:{self.port}")
     
     def hexValue(self, i: int) -> str:
         return (hex(i)[2:]).upper()
@@ -71,12 +84,23 @@ class SolarMax():
     def query(self, code: str) -> int:
         queryString = self.createQueryString(code)
 
-        # send query
-        self.socket.send(queryString.encode())
-        #recive query
-        data = ""
-        while len(data) < 1:
-            data = self.socket.recv(255).decode()
+        try:
+            # send query
+            self.socket.sendall(queryString.encode())
+            #recive query
+            data = ""
+            while len(data) < 1:
+                data = self.socket.recv(255).decode()
+        except:
+            self.socket.close()
+            self.connect()
+
+            # send query
+            self.socket.sendall(queryString.encode())
+            #recive query
+            data = ""
+            while len(data) < 1:
+                data = self.socket.recv(255).decode()
         
         # check crc
         inCrc = data[-5:-1]
@@ -115,12 +139,12 @@ class SolarMax():
 
     def model(self) -> str:
         inverter_types = {
-            20010: { 'desc': 'SolarMax 2000S', 'max': 2000, },
-            20020: { 'desc': 'SolarMax 3000S', 'max': 3000, },
-            20030: { 'desc': 'SolarMax 4200S', 'max': 4200, },
-            20040: { 'desc': 'SolarMax 6000S', 'max': 6000, },
+            20010: 'SolarMax 2000S',
+            20020: 'SolarMax 3000S',
+            20030: 'SolarMax 4200S',
+            20040: 'SolarMax 6000S',
         }
-        return inverter_types[self.type()]['desc']
+        return inverter_types[self.type()]
 
     def status(self) -> str:
         status_codes = {
