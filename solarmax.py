@@ -1,9 +1,14 @@
 import socket
 
 class SolarMax():
-    def __init__(self, host: str, port: int) -> None:
+    def __init__(self, host: str, port: int, inverterIndex: int) -> None:
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #type: socket.socket
+        self.index = inverterIndex
         self.connect(host, port)
+    
+    def __del__(self) -> None:
+        if self.socket is not None:
+            self.socket.close()
     
     def connect(self, host:str , port: int) -> None:
         try:
@@ -25,14 +30,14 @@ class SolarMax():
             crc = '0'+crc
         return crc
     
-    def createQueryString(self, inverterIndex: int, code: str) -> str:
+    def createQueryString(self, code: str) -> str:
         # For the structure see 1.1
 
         # FB is hex for 251 wich is the reserved aress for an outsite host wich we are see 1.3
         srcAddress = "FB"
 
         # inverterIndex is the index of the inverter we want to query wich is converted to hex wich has to be 2 characters long see 1.1
-        destAddress = self.hexValue(inverterIndex)
+        destAddress = self.hexValue(self.index)
         if len(destAddress) < 2:
             destAddress = '0'+destAddress
 
@@ -55,14 +60,14 @@ class SolarMax():
         # we are only interested in the data part
         # so we remove the header and the checksum
         # and convert the data to an int
-        data = data.split("|")[1]
-        if data == "":
+        ndata = data.split("|")[1]
+        if ndata == "":
             return None
-        data = data.split("=")[1]
-        return int(data, 16)
+        ndata = ndata.split("=")[1]
+        return int(ndata, 16)
 
-    def query(self, inverterIndex: int, code: str) -> int:
-        queryString = self.createQueryString(inverterIndex, code)
+    def query(self, code: str) -> int:
+        queryString = self.createQueryString(code)
 
         # send query
         self.socket.send(queryString.encode())
@@ -79,4 +84,71 @@ class SolarMax():
         
         # parse data
         return self.parseData(data)
+    
+    def ACOutput(self) -> float:
+        data = self.query("PAC")
+        return round(data * 0.5, 1)
+    
+    def operatingHours(self) -> int:
+        return self.query("KHR")
+
+    def dateYear(self) -> int:
+        return self.query("DYR")
+    
+    def dateMonth(self) -> int:
+        return self.query("DMT")
+    
+    def dateDay(self) -> int:
+        return self.query("DDY")
+    
+    def energyYear(self) -> int:
+        return self.query("KYR")
+    
+    def energyMonth(self) -> int:
+        return self.query("KMT")
+    
+    def energyDay(self) -> float:
+        return round(self.query("KDY") * 0.1, 1)
+    
+    def energyTotal(self) -> int:
+        return self.query("KT0")
+    
+    def installedCapacity(self) -> float:
+        return round(self.query("PIN") * 0.5, 1)
+    
+    def mainsCycleDuration(self) -> int:
+        return self.query("TNP")
+    
+    def networkAddress(self) -> int:
+        return self.query("ADR")
+    
+    def relativeOutput(self) -> int:
+        return self.query("PRL")
+    
+    def softwareVersion(self) -> int:
+        return self.query("SWV")
+    
+    def voltageDC(self) -> float:
+        return round(self.query("UDC") * 0.1, 1)
+    
+    def voltagePhaseOne(self) -> float:
+        return round(self.query("UL1") * 0.1, 1)
+    
+    def currentDC(self) -> float:
+        return round(self.query("IDC") * 0.01, 2)
+    
+    def currentPhaseOne(self) -> float:
+        return round(self.query("IL1") * 0.01, 2)
+    
+    def temperaturePowerUnitOne(self) -> int:
+        return self.query("TKK")
+    
+    def model(self) -> int:
+        return self.query("TYP")
+    
+    def timeMinutes(self) -> int:
+        return self.query("TMI")
+    
+    def timeHours(self) -> int:
+        return self.query("THR")
         
