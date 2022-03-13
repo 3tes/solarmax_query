@@ -3,7 +3,7 @@ import socket
 class SolarMax():
     def __init__(self, host: str, port: int) -> None:
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #type: socket.socket
-        #self.connect(host, port)
+        self.connect(host, port)
     
     def connect(self, host:str , port: int) -> None:
         try:
@@ -49,7 +49,34 @@ class SolarMax():
 
         return queryString
 
-    def query(self, inverterIndex: int, code: str):
+    def parseData(self, data: str) -> int:
+        # data is the data from the inverter
+        # for example "{01;FB;18|64:ADR=1|04A9}"
+        # we are only interested in the data part
+        # so we remove the header and the checksum
+        # and convert the data to an int
+        data = data.split("|")[1]
+        if data == "":
+            return None
+        data = data.split("=")[1]
+        return int(data, 16)
+
+    def query(self, inverterIndex: int, code: str) -> int:
         queryString = self.createQueryString(inverterIndex, code)
 
-        respones = self.socket.send(queryString.encode())
+        # send query
+        self.socket.send(queryString.encode())
+        #recive query
+        data = ""
+        while len(data) < 1:
+            data = self.socket.recv(255).decode()
+        
+        # check crc
+        inCrc = data[-5:-1]
+        checkCrc = self.checksum(data[1:-5])
+        if inCrc != checkCrc:
+            raise Exception("CRC check failed")
+        
+        # parse data
+        return self.parseData(data)
+        
